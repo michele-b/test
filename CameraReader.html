@@ -3,52 +3,70 @@
 <html lang="en">
 	<head>
 		<title>BarcodeReader</title>
-		<script type="text/javascript" src="camera.js"></script>
 	</head>
 	<body>  
 		<div id="container">
 			<img width="320" height="240" src="about:blank" alt="" id="picture">
-			<img width="320" height="240" alt="" id="camera">
 			<input id="Take-Picture" type="file" accept="image/*;capture=camera" />
 			<p id="textbit"></p>
 		</div>
+
+<video autoplay></video>
+<canvas style="display:none;"></canvas>
+<p><button id="start-button">Start</button> <button id="stop-button">Stop</button></p>
+<script>
+  var video = document.querySelector('video');
+  var canvas = document.querySelector('canvas');
+  var showPicture = document.querySelector("#picture");
+  var ctx = canvas.getContext('2d');
+  var localMediaStream = null;
+
+var errorCallback = function(e) {
+    console.log('Reeeejected!', e);
+};
+
+document.querySelector('#start-button').addEventListener('click', function(e) {
+if (navigator.getUserMedia) {
+    navigator.getUserMedia('video', function(stream) {
+      video.src = stream;
+      localMediaStream = stream;
+    }, errorCallback);
+  } else if (navigator.webkitGetUserMedia) {
+    navigator.webkitGetUserMedia({video: true}, function(stream) {
+      video.src = window.URL.createObjectURL(stream);
+      localMediaStream = stream;
+    }, errorCallback);
+  } else {
+    errorCallback({target: video});
+  }
+
+  function snapshot() {
+    if (localMediaStream) {
+      ctx.drawImage(video, 0, 0);
+      // "image/webp" works in Chrome.
+      // Other browsers will fall back to image/png.
+      showPicture.src = canvas.toDataURL('image/webp');
+      DecodeBar();
+    }
+  }
+
+  video.addEventListener('click', snapshot, false);
+}, false);
+
+document.querySelector('#stop-button').addEventListener('click', function(e) {
+  video.pause();
+  localMediaStream.stop(); // Doesn't do anything in Chrome.
+}, false);
+
+</script>
+
 		<script type="text/javascript">
-			camera.init({
-			    width: 160, // default: 640
-			    height: 120, // default: 480
-			    fps: 30, // default: 30
-			    mirror: true,  // default: false
-			    targetCanvas: document.getElementById('camera'), // default: null 
-
-			    onFrame: function(canvas) {
-			        // do something with image data found in the canvas argument
-			        DecodeWorker.postMessage({ImageData: ctx.getImageData(0,0,canvas.width,canvas.height).data, Width: canvas.width, Height: canvas.height, cmd: "normal"});
-			    },
-
-			    onSuccess: function() {
-			        // stream succesfully started, yay!
-			    },
-
-			    onError: function(error) {
-			        // something went wrong on initialization
-			    },
-
-			    onNotSupported: function() {
-			        // instruct the user to get a better browser
-			    }
-			});
-
-
-
-
+			
 			var takePicture = document.querySelector("#Take-Picture"),
-			showPicture = document.querySelector("#picture");
 			Result = document.querySelector("#textbit");
-			Canvas = document.createElement("canvas");
-			Canvas.width=640;
-			Canvas.height=480;
+			canvas.width=640;
+			canvas.height=480;
 			var resultArray = [];
-			ctx = Canvas.getContext("2d");
 			var workerCount = 0;
 			function receiveMessage(e) {
 				if(e.data.success === "log") {
@@ -59,7 +77,7 @@
 					workerCount--;
 					if(workerCount) {
 						if(resultArray.length == 0) {
-							DecodeWorker.postMessage({ImageData: ctx.getImageData(0,0,Canvas.width,Canvas.height).data, Width: Canvas.width, Height: Canvas.height, cmd: "flip"});
+							DecodeWorker.postMessage({ImageData: ctx.getImageData(0,0,canvas.width,canvas.height).data, Width: canvas.width, Height: canvas.height, cmd: "flip"});
 						} else {
 							workerCount--;
 						}
@@ -111,11 +129,11 @@
 			}
 			function DecodeBar(){
 				showPicture.onload = function(){
-					ctx.drawImage(showPicture,0,0,Canvas.width,Canvas.height);
+					ctx.drawImage(showPicture,0,0,canvas.width,canvas.height);
 					resultArray = [];
 					workerCount = 2;
 					Result.innerHTML="";
-					DecodeWorker.postMessage({ImageData: ctx.getImageData(0,0,Canvas.width,Canvas.height).data, Width: Canvas.width, Height: Canvas.height, cmd: "normal"});
+					DecodeWorker.postMessage({ImageData: ctx.getImageData(0,0,canvas.width,canvas.height).data, Width: canvas.width, Height: canvas.height, cmd: "normal"});
 				}
 			}
 		</script>
