@@ -5,21 +5,25 @@
 		<title>BarcodeReader</title>
 	</head>
 	<body>  
-		<div id="container">
-			<img width="320" height="240" src="about:blank" alt="" id="picture">
-			<input id="Take-Picture" type="file" accept="image/*;capture=camera" />
-			<p id="textbit"></p>
-		</div>
+	<div id="container">
+		<video width="320" height="240" autoplay></video>
+		<img width="320" height="240" src="about:blank" alt="" id="picture" />
 
-<video autoplay></video>
+		<p><button id="start-button">Start</button> <button id="stop-button">Stop</button></p>
+		<input id="Take-Picture" type="file" accept="image/*;capture=camera">
+		<p id="textbit"></p>
+	</div>
 <canvas style="display:none;"></canvas>
-<p><button id="start-button">Start</button> <button id="stop-button">Stop</button></p>
+
 <script>
   var video = document.querySelector('video');
   var canvas = document.querySelector('canvas');
   var showPicture = document.querySelector("#picture");
   var ctx = canvas.getContext('2d');
   var localMediaStream = null;
+
+  var renderTimer;
+  var fps = 1;
 
 var errorCallback = function(e) {
     console.log('Reeeejected!', e);
@@ -42,25 +46,31 @@ if (navigator.getUserMedia) {
 
   function snapshot() {
     if (localMediaStream) {
-      ctx.drawImage(video, 0, 0);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       // "image/webp" works in Chrome.
       // Other browsers will fall back to image/png.
-      showPicture.src = canvas.toDataURL('image/webp');
+      showPicture.src = canvas.toDataURL('image/png');
       DecodeBar();
     }
   }
 
   video.addEventListener('click', snapshot, false);
+
+  renderTimer = setInterval(snapshot, Math.round(1000 / fps));
+
 }, false);
 
-document.querySelector('#stop-button').addEventListener('click', function(e) {
+function stop(e) {
+  if (renderTimer) clearInterval(renderTimer);
   video.pause();
   localMediaStream.stop(); // Doesn't do anything in Chrome.
-}, false);
+}
 
-</script>
+document.querySelector('#stop-button').addEventListener('click', stop, false);
 
-		<script type="text/javascript">
+
+//------------------------------------------
+
 			
 			var takePicture = document.querySelector("#Take-Picture"),
 			Result = document.querySelector("#textbit");
@@ -91,6 +101,7 @@ document.querySelector('#stop-button').addEventListener('click', function(e) {
 						}
 					}
 					Result.innerHTML=resultArray.join("<br />");
+stop();
 				}else{
 					if(resultArray.length === 0 && workerCount === 0) {
 						Result.innerHTML="Decoding failed.";
